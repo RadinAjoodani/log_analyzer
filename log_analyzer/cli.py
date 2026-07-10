@@ -5,6 +5,7 @@ import sys
 import time
 from datetime import datetime
 from typing import Optional
+from pathlib import Path
 
 from log_analyzer.processor import LogProcessor
 from log_analyzer.stats import StatsAggregator
@@ -47,7 +48,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "-o",
         "--output",
         metavar="PATH",
-        default="report.json",
+        default="output/report.json",
         help=(
             "File path to save the JSON report to (only used together with "
             "--json). Defaults to 'report.json' in the current directory."
@@ -136,6 +137,7 @@ def run(argv: Optional[list[str]] = None) -> int:
         print(rendered)
 
         try:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(rendered)
                 f.write("\n")
