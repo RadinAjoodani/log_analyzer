@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 from log_analyzer.stats import StatsSummary
+from log_analyzer.anomalies import SuspiciousIP, ErrorSpike
 
 _RULE_WIDTH = 60
 _MAX_BAR_WIDTH = 40
@@ -11,6 +12,8 @@ def print_report(
     invalid_count: int,
     total_lines: int,
     invalid_samples: Optional[list[str]] = None,
+    suspicious_ips: Optional[list[SuspiciousIP]] = None,
+    error_spikes: Optional[list[ErrorSpike]] = None,
 ) -> None:
     _print_header("LOG ANALYSIS REPORT")
     _print_overview(summary, invalid_count, total_lines)
@@ -23,6 +26,14 @@ def print_report(
 
     _print_header("HOURLY REQUEST DISTRIBUTION")
     _print_hourly_histogram(summary.hourly_distribution)
+
+    if suspicious_ips is not None:
+        _print_header("SUSPICIOUS ACTIVITY (possible brute-force login attempts)")
+        _print_suspicious_ips(suspicious_ips)
+
+    if error_spikes is not None:
+        _print_header("5xx ERROR SPIKES (abnormal time windows)")
+        _print_error_spikes(error_spikes)
 
     if invalid_samples:
         _print_header("SAMPLE INVALID LINES")
@@ -47,7 +58,6 @@ def _print_overview(summary: StatsSummary, invalid_count: int, total_lines: int)
     for label, value in rows:
         print(f"{label.ljust(label_width)} : {value}")
 
-
 def _print_top_endpoints(top_endpoints: list[tuple[str, int]]) -> None:
     if not top_endpoints:
         print("(no requests recorded)")
@@ -63,7 +73,7 @@ def _print_top_endpoints(top_endpoints: list[tuple[str, int]]) -> None:
             f"{endpoint.ljust(endpoint_width)}  "
             f"{str(count).rjust(count_width)} requests"
         )
-
+        
 def _print_status_codes(status_code_counts: dict[int, int], total_requests: int) -> None:
     if not status_code_counts:
         print("(no requests recorded)")
@@ -96,8 +106,35 @@ def _make_bar(count: int, max_count: int) -> str:
     remainder = exact - full_blocks
     partial = blocks[int(remainder * 8) - 1] if remainder > 0 else ""
     return "█" * full_blocks + partial
-
 def _print_invalid_samples(invalid_samples: list[str]) -> None:
     for line in invalid_samples:
         display = line if line else "(blank line)"
         print(f"  {display!r}")
+
+def _print_suspicious_ips(suspicious_ips: list[SuspiciousIP]) -> None:
+    if not suspicious_ips:
+        print("(none detected)")
+        return
+
+    ip_width = max(len(s.ip) for s in suspicious_ips)
+    for s in suspicious_ips:
+        print(
+            f"{s.ip.ljust(ip_width)}  "
+            f"{s.failed_auth_count} failed logins  "
+            f"/ {s.total_requests} total requests  "
+            f"({s.failed_auth_ratio * 100:.1f}% of its traffic)"
+        )
+
+def _print_error_spikes(error_spikes: list[ErrorSpike]) -> None:
+    if not error_spikes:
+        print("(none detected)")
+        return
+
+    for s in error_spikes:
+        window_str = s.window_start.strftime("%Y-%m-%d %H:%M:%S")
+        print(
+            f"{window_str}  "
+            f"error rate {s.error_rate:5.1f}%  "
+            f"(baseline {s.baseline_rate:4.1f}%)  "
+            f"{s.error_count}/{s.total_requests} requests failed"
+        )

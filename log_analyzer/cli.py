@@ -5,10 +5,9 @@ import sys
 import time
 from datetime import datetime
 from typing import Optional
-from pathlib import Path
-
 from log_analyzer.processor import LogProcessor
 from log_analyzer.stats import StatsAggregator
+from log_analyzer.anomalies import SuspiciousActivityDetector, ErrorSpikeDetector
 from log_analyzer import report
 
 _TIME_FILTER_FORMATS = (
@@ -48,7 +47,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "-o",
         "--output",
         metavar="PATH",
-        default="output/report.json",
+        default="report.json",
         help=(
             "File path to save the JSON report to (only used together with "
             "--json). Defaults to 'report.json' in the current directory."
@@ -77,6 +76,49 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Print how long processing took.",
     )
+    parser.add_argument(
+        "--detect-anomalies",
+        action="store_true",
+        help=(
+            "Enable anomaly detection: flags IPs with suspiciously many "
+            "failed login attempts, and time windows with abnormal 5xx "
+            "error rates."
+        ),
+    )
+    parser.add_argument(
+        "--min-failed-auth",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Minimum failed-login count before an IP is flagged (default: 5).",
+    )
+    parser.add_argument(
+        "--auth-status",
+        type=int,
+        default=401,
+        metavar="CODE",
+        help="Status code treated as a failed authentication attempt (default: 401).",
+    )
+    parser.add_argument(
+        "--auth-endpoint-keyword",
+        default="login",
+        metavar="TEXT",
+        help="Case-insensitive substring identifying auth endpoints (default: 'login').",
+    )
+    parser.add_argument(
+        "--spike-window",
+        type=int,
+        default=60,
+        metavar="SECONDS",
+        help="Time window size in seconds for 5xx spike detection (default: 60).",
+    )
+    parser.add_argument(
+        "--spike-zscore",
+        type=float,
+        default=2.0,
+        metavar="Z",
+        help="How many standard deviations above the mean counts as a spike (default: 2.0).",
+    )
     return parser.parse_args(argv)
 
 
@@ -104,12 +146,23 @@ def _in_range(
 
 
 def run(argv: Optional[list[str]] = None) -> int:
+    """Main entry point. Returns a process exit code (0 = success)."""
     args = parse_args(argv)
 
     start_filter = _parse_time_filter(args.start, "--start") if args.start else None
     end_filter = _parse_time_filter(args.end, "--end") if args.end else None
+
     processor = LogProcessor(args.logfile)
     aggregator = StatsAggregator()
+
+    suspicious_detector: Optional[SuspiciousActivityDetector] = None
+    spike_detector: Optional[ErrorSpikeDetector] = None
+    if args.detect_anomalies:
+        suspicious_detector = SuspiciousActivityDetector(
+            auth_status=args.auth_status,
+            endpoint_keyword=args.auth_endpoint_keyword,
+        )
+        spike_detector = ErrorSpikeDetector(window_seconds=args.spike_window)
 
     started_at = time.perf_counter()
 
@@ -118,6 +171,9 @@ def run(argv: Optional[list[str]] = None) -> int:
             if not _in_range(entry.timestamp, start_filter, end_filter):
                 continue
             aggregator.add(entry)
+            if suspicious_detector is not None:
+                suspicious_detector.add(entry)
+                spike_detector.add(entry)
     except FileNotFoundError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -126,18 +182,43 @@ def run(argv: Optional[list[str]] = None) -> int:
 
     summary = aggregator.summary(top_n=args.top)
 
+    suspicious_ips = []
+    error_spikes = []
+    if args.detect_anomalies:
+        suspicious_ips = suspicious_detector.flagged(min_count=args.min_failed_auth)
+        error_spikes = spike_detector.detect_spikes(z_threshold=args.spike_zscore)
+
     if args.json:
         payload = summary.to_dict()
         payload["invalid_lines"] = processor.invalid_count
         payload["total_lines_read"] = processor.total_lines
         if args.timing:
             payload["elapsed_seconds"] = round(elapsed, 4)
+        if args.detect_anomalies:
+            payload["suspicious_ips"] = [
+                {
+                    "ip": s.ip,
+                    "failed_auth_count": s.failed_auth_count,
+                    "total_requests": s.total_requests,
+                    "failed_auth_ratio": round(s.failed_auth_ratio, 4),
+                }
+                for s in suspicious_ips
+            ]
+            payload["error_spikes"] = [
+                {
+                    "window_start": s.window_start.isoformat(),
+                    "total_requests": s.total_requests,
+                    "error_count": s.error_count,
+                    "error_rate_percent": round(s.error_rate, 2),
+                    "baseline_rate_percent": round(s.baseline_rate, 2),
+                }
+                for s in error_spikes
+            ]
 
         rendered = json.dumps(payload, indent=2)
         print(rendered)
 
         try:
-            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(rendered)
                 f.write("\n")
@@ -152,6 +233,8 @@ def run(argv: Optional[list[str]] = None) -> int:
             invalid_count=processor.invalid_count,
             total_lines=processor.total_lines,
             invalid_samples=processor.invalid_samples if args.show_invalid_samples else None,
+            suspicious_ips=suspicious_ips if args.detect_anomalies else None,
+            error_spikes=error_spikes if args.detect_anomalies else None,
         )
         if args.timing:
             print(f"\nProcessed in {elapsed:.3f}s")
