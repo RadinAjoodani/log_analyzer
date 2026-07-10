@@ -21,7 +21,11 @@ _TIME_FILTER_FORMATS = (
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="log-analyzer",
-        description=(),
+        description=(
+            "Analyze a web server access log (Combined Log Format) and "
+            "produce request statistics, top endpoints, error rate, and "
+            "an hourly request histogram."
+        ),
     )
     parser.add_argument(
         "logfile",
@@ -38,6 +42,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Output the report as JSON instead of a human-readable table.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="PATH",
+        default="report.json",
+        help=(
+            "File path to save the JSON report to (only used together with "
+            "--json). Defaults to 'report.json' in the current directory."
+        ),
     )
     parser.add_argument(
         "--start",
@@ -93,7 +107,6 @@ def run(argv: Optional[list[str]] = None) -> int:
 
     start_filter = _parse_time_filter(args.start, "--start") if args.start else None
     end_filter = _parse_time_filter(args.end, "--end") if args.end else None
-
     processor = LogProcessor(args.logfile)
     aggregator = StatsAggregator()
 
@@ -118,7 +131,19 @@ def run(argv: Optional[list[str]] = None) -> int:
         payload["total_lines_read"] = processor.total_lines
         if args.timing:
             payload["elapsed_seconds"] = round(elapsed, 4)
-        print(json.dumps(payload, indent=2))
+
+        rendered = json.dumps(payload, indent=2)
+        print(rendered)
+
+        try:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(rendered)
+                f.write("\n")
+        except OSError as exc:
+            print(f"error: could not write JSON report to {args.output!r}: {exc}", file=sys.stderr)
+            return 1
+
+        print(f"\nJSON report saved to {args.output}", file=sys.stderr)
     else:
         report.print_report(
             summary,
