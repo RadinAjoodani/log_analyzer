@@ -75,19 +75,27 @@ def _print_status_codes(status_code_counts: dict[int, int], total_requests: int)
         print(f"{status}  {str(count).rjust(6)} requests  ({pct:5.2f}%)")
 
 def _print_hourly_histogram(hourly_distribution: dict[int, int]) -> None:
+    total = sum(hourly_distribution.values())
     max_count = max(hourly_distribution.values(), default=0)
+    peak_hour = max(hourly_distribution, key=hourly_distribution.get) if max_count else None
 
     for hour in range(24):
         count = hourly_distribution.get(hour, 0)
+        pct = (count / total * 100) if total else 0.0
         bar = _make_bar(count, max_count)
-        print(f"{hour:02d}:00  {str(count).rjust(6)}  {bar}")
+        marker = " *peak*" if hour == peak_hour else ""
+        print(f"{hour:02d}:00  {str(count).rjust(6)}  ({pct:5.1f}%)  {bar}{marker}")
 
 
 def _make_bar(count: int, max_count: int) -> str:
-    if max_count == 0:
+    if max_count == 0 or count == 0:
         return ""
-    bar_length = round((count / max_count) * _MAX_BAR_WIDTH)
-    return "#" * bar_length
+    blocks = "▏▎▍▌▋▊▉█"
+    exact = (count / max_count) * _MAX_BAR_WIDTH
+    full_blocks = int(exact)
+    remainder = exact - full_blocks
+    partial = blocks[int(remainder * 8) - 1] if remainder > 0 else ""
+    return "█" * full_blocks + partial
 
 def _print_invalid_samples(invalid_samples: list[str]) -> None:
     for line in invalid_samples:
