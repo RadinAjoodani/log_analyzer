@@ -121,11 +121,12 @@ log-analyzer/
 │   ├── stats.py              # aggregates parsed entries into statistics
 │   ├── anomalies.py            # suspicious-IP and error-spike detection
 │   └── report.py                # formats and prints the final report
+└── sample/
+│   ├── access.log          # sample file that is tested by program
+│   └── access.log.gz       # .gz format of sample file
 └── tests/
     ├── test_parser.py
-    ├── test_stats.py
-    └── fixtures/
-        └── sample.log
+    └── test_stats.py
 ```
 
 ## Design Decisions
