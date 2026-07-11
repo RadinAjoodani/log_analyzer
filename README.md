@@ -135,7 +135,3 @@ log-analyzer/
 - **Regex-based parsing over a log library**: per the project constraints, no library auto-parses access logs — a hand-written, well-documented regex handles the Combined Log Format directly, with extra validation (IP shape, status code range) beyond what the regex alone guarantees.
 - **Separation of concerns**: parsing, streaming, aggregation, anomaly detection, and report formatting each live in their own module with no circular knowledge of each other — this made the statistics and parsing logic straightforward to unit test in isolation, without needing real files.
 - **Never raise on bad data**: `parse_line()` returns `None` instead of raising on malformed input, so a single corrupted line can never crash a run over hundreds of thousands of lines.
-
-## Implementation Challenge
-
-One of the trickier parts was the 5xx error-spike detector. An early version simply flagged any time window with 5xx errors, which produced far too many false positives on logs with a small, constant background error rate. The fix was to bucket requests into fixed time windows, compute the _mean and standard deviation_ of the error rate across all windows, and only flag windows that are statistical outliers (a configurable number of standard deviations above the mean) — while also requiring a minimum request count and minimum error rate per window, so a single error in a nearly-empty window isn't mistaken for a 100% outage.
