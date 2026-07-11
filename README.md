@@ -59,7 +59,7 @@ python -m log_analyzer access.log.gz
 | `logfile`                      | Path to the access log file (plain text or `.gz`). Required.                                                    |
 | `--top N`                      | Number of top endpoints to show (default: `10`).                                                                |
 | `--json`                       | Output the report as JSON instead of a human-readable table.                                                    |
-| `-o`, `--output PATH`          | File path to save the JSON report to (default: `report.json`). Only used with `--json`.                         |
+| `-o`, `--output PATH`          | File path to save the JSON report to (default: `output/report.json`). Only used with `--json`.                  |
 | `--start TIME`                 | Only include entries at or after this time. Accepts `YYYY-MM-DD`, `YYYY-MM-DD HH:MM`, or `YYYY-MM-DD HH:MM:SS`. |
 | `--end TIME`                   | Only include entries at or before this time. Same formats as `--start`.                                         |
 | `--show-invalid-samples`       | Print a few example lines that failed to parse.                                                                 |

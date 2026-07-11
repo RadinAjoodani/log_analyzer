@@ -9,6 +9,7 @@ from log_analyzer.processor import LogProcessor
 from log_analyzer.stats import StatsAggregator
 from log_analyzer.anomalies import SuspiciousActivityDetector, ErrorSpikeDetector
 from log_analyzer import report
+from pathlib import Path
 
 _TIME_FILTER_FORMATS = (
     "%Y-%m-%d %H:%M:%S",
@@ -47,7 +48,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "-o",
         "--output",
         metavar="PATH",
-        default="report.json",
+        default="output/report.json",
         help=(
             "File path to save the JSON report to (only used together with "
             "--json). Defaults to 'report.json' in the current directory."
@@ -146,11 +147,19 @@ def _in_range(
 
 
 def run(argv: Optional[list[str]] = None) -> int:
-    """Main entry point. Returns a process exit code (0 = success)."""
     args = parse_args(argv)
-
-    start_filter = _parse_time_filter(args.start, "--start") if args.start else None
-    end_filter = _parse_time_filter(args.end, "--end") if args.end else None
+    
+    start_filter = None;
+    end_filter = None;
+    if args.start :
+        start_filter = _parse_time_filter(args.start, "--start")
+    else:
+        None
+    
+    if args.end :
+        end_filter = _parse_time_filter(args.end, "--end")
+    else:
+        None
 
     processor = LogProcessor(args.logfile)
     aggregator = StatsAggregator()
@@ -179,7 +188,6 @@ def run(argv: Optional[list[str]] = None) -> int:
         return 1
 
     elapsed = time.perf_counter() - started_at
-
     summary = aggregator.summary(top_n=args.top)
 
     suspicious_ips = []
@@ -215,10 +223,11 @@ def run(argv: Optional[list[str]] = None) -> int:
                 for s in error_spikes
             ]
 
-        rendered = json.dumps(payload, indent=2)
+        rendered = json.dumps(payload, indent=3)
         print(rendered)
 
         try:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(rendered)
                 f.write("\n")

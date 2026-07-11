@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
  
- 
+# Creating the class of entries:
 @dataclass(frozen=True)
 class LogEntry:
     ip: str
@@ -35,13 +35,13 @@ LOG_PATTERN = re.compile(
 
 TIMESTAMP_FORMAT = "%d/%b/%Y:%H:%M:%S %z"
  
- 
+# Creating a new error for parsing errors:
 class LogParseError(ValueError):
     """Raised when a log line does not match the expected format or contains invalid data."""
     pass
 
 def parse_line(line: str) -> Optional[LogEntry]:
-    if not line or not line.strip():
+    if not line or not line.strip(): # if a line is empty or just spaces:
         return None
  
     try:
@@ -58,7 +58,7 @@ def _parse_line_strict(line: str) -> LogEntry:
     fields = match.groupdict()
  
     ip = fields["ip"]
-    if not _looks_like_ip(ip):
+    if not _ip_checker(ip):
         raise LogParseError(f"invalid IP address: {ip!r}")
  
     timestamp = _parse_timestamp(fields["timestamp"])
@@ -103,9 +103,7 @@ def _parse_timestamp(raw: str) -> datetime:
         raise LogParseError(f"invalid timestamp {raw!r}: {exc}") from exc
  
  
-def _looks_like_ip(value: str) -> bool:
-    if ":" in value:  
-        return True
+def _ip_checker(value: str) -> bool:
     parts = value.split(".")
     if len(parts) != 4:
         return False

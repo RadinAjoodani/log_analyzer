@@ -61,8 +61,8 @@ class ErrorSpikeDetector:
         if window_seconds <= 0:
             raise ValueError("window_seconds must be positive")
         self.window_seconds = window_seconds
-        self._total_by_window: Counter[datetime] = Counter()
-        self._errors_by_window: Counter[datetime] = Counter()
+        self._total_by_window: Counter[datetime] = Counter() # total requests in a block
+        self._errors_by_window: Counter[datetime] = Counter() # total errors in a block
 
     def add(self, entry: LogEntry) -> None:
         bucket = self._bucket_for(entry.timestamp)
@@ -71,9 +71,9 @@ class ErrorSpikeDetector:
             self._errors_by_window[bucket] += 1
 
     def _bucket_for(self, timestamp: datetime) -> datetime:
-        naive = timestamp.replace(tzinfo=None)
-        epoch_seconds = int(naive.timestamp())
-        floored = (epoch_seconds // self.window_seconds) * self.window_seconds
+        naive = timestamp.replace(tzinfo=None) # Remove time zone
+        epoch_seconds = int(naive.timestamp()) # Calculate the time in seconds
+        floored = (epoch_seconds // self.window_seconds) * self.window_seconds # Find the bucket of that time
         return datetime.fromtimestamp(floored)
 
     def detect_spikes(
@@ -82,7 +82,13 @@ class ErrorSpikeDetector:
         min_requests: int = 5,
         min_error_rate: float = 5.0,
     ) -> list[ErrorSpike]:
-        windows = [w for w, total in self._total_by_window.items() if total >= min_requests]
+        
+        windows = []
+
+        for w, total in self._total_by_window.items():
+            if total >= min_requests:
+                windows.append(w)
+
         if len(windows) < 2:
             return []
 

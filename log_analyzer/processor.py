@@ -7,14 +7,13 @@ from log_analyzer.parser import LogEntry, parse_line
 PathLike = Union[str, Path]
 
 class LogProcessor:
-
     def __init__(self, path: PathLike):
         self.path = Path(path)
         self.total_lines = 0
         self.valid_count = 0
         self.invalid_count = 0
         self.invalid_samples: list[str] = []
-        self._max_invalid_samples = 5
+        self._max_invalid_samples = 10
 
     def process(self) -> Iterator[LogEntry]:
         with self._open() as f:

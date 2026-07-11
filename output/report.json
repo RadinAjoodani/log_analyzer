@@ -1,85 +1,87 @@
 {
-  "total_requests": 495044,
-  "unique_ip_count": 4001,
-  "top_endpoints": [
-    {
-      "endpoint": "/",
-      "count": 146302
-    },
-    {
-      "endpoint": "/products",
-      "count": 87685
-    },
-    {
-      "endpoint": "/api/search",
-      "count": 48842
-    },
-    {
-      "endpoint": "/cart",
-      "count": 34181
-    },
-    {
-      "endpoint": "/login",
-      "count": 31658
-    },
-    {
-      "endpoint": "/static/app.js",
-      "count": 29249
-    },
-    {
-      "endpoint": "/static/style.css",
-      "count": 24299
-    },
-    {
-      "endpoint": "/health",
-      "count": 14549
-    },
-    {
-      "endpoint": "/api/checkout",
-      "count": 9807
-    },
-    {
-      "endpoint": "/products/9820",
-      "count": 20
-    }
-  ],
-  "error_rate_percent": 10.32,
-  "error_count": 51075,
-  "hourly_distribution": {
-    "0": 51026,
-    "1": 50971,
-    "2": 50975,
-    "3": 50705,
-    "4": 50847,
-    "5": 51002,
-    "6": 50809,
-    "7": 50844,
-    "8": 50912,
-    "9": 36953,
-    "10": 0,
-    "11": 0,
-    "12": 0,
-    "13": 0,
-    "14": 0,
-    "15": 0,
-    "16": 0,
-    "17": 0,
-    "18": 0,
-    "19": 0,
-    "20": 0,
-    "21": 0,
-    "22": 0,
-    "23": 0
-  },
-  "status_code_counts": {
-    "200": 420151,
-    "401": 7464,
-    "301": 23818,
-    "404": 19173,
-    "500": 17760,
-    "503": 3389,
-    "502": 3289
-  },
-  "invalid_lines": 4956,
-  "total_lines_read": 500000
+   "total_requests": 495044,
+   "unique_ip_count": 4001,
+   "top_endpoints": [
+      {
+         "endpoint": "/",
+         "count": 146302
+      },
+      {
+         "endpoint": "/products",
+         "count": 87685
+      },
+      {
+         "endpoint": "/api/search",
+         "count": 48842
+      },
+      {
+         "endpoint": "/cart",
+         "count": 34181
+      },
+      {
+         "endpoint": "/login",
+         "count": 31658
+      },
+      {
+         "endpoint": "/static/app.js",
+         "count": 29249
+      },
+      {
+         "endpoint": "/static/style.css",
+         "count": 24299
+      },
+      {
+         "endpoint": "/health",
+         "count": 14549
+      },
+      {
+         "endpoint": "/api/checkout",
+         "count": 9807
+      },
+      {
+         "endpoint": "/products/9820",
+         "count": 20
+      }
+   ],
+   "client_error_count": 26637,
+   "server error_count": 24438,
+   "client_error_rate_percent": 5.38,
+   "server_error_rate_percent": 4.94,
+   "hourly_distribution": {
+      "0": 51026,
+      "1": 50971,
+      "2": 50975,
+      "3": 50705,
+      "4": 50847,
+      "5": 51002,
+      "6": 50809,
+      "7": 50844,
+      "8": 50912,
+      "9": 36953,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 0,
+      "21": 0,
+      "22": 0,
+      "23": 0
+   },
+   "status_code_counts": {
+      "200": 420151,
+      "401": 7464,
+      "301": 23818,
+      "404": 19173,
+      "500": 17760,
+      "503": 3389,
+      "502": 3289
+   },
+   "invalid_lines": 4956,
+   "total_lines_read": 500000
 }
