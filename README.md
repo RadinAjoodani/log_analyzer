@@ -115,12 +115,12 @@ python -m unittest discover -s tests -v
 log-analyzer/
 ├── log_analyzer/
 │   ├── __main__.py      # entry point for `python -m log_analyzer`
-│   ├── cli.py            # argument parsing and orchestration
-│   ├── parser.py          # turns one raw log line into a structured record
-│   ├── processor.py        # streams the log file line by line
-│   ├── stats.py              # aggregates parsed entries into statistics
-│   ├── anomalies.py            # suspicious-IP and error-spike detection
-│   └── report.py                # formats and prints the final report
+│   ├── cli.py           # argument parsing and orchestration
+│   ├── parser.py        # turns one raw log line into a structured record
+│   ├── processor.py     # streams the log file line by line
+│   ├── stats.py         # aggregates parsed entries into statistics
+│   ├── anomalies.py     # suspicious-IP and error-spike detection
+│   └── report.py        # formats and prints the final report
 └── sample/
 │   ├── access.log          # sample file that is tested by program
 │   └── access.log.gz       # .gz format of sample file
