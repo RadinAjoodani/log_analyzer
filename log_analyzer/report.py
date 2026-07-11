@@ -15,7 +15,8 @@ def print_report(
     suspicious_ips: Optional[list[SuspiciousIP]] = None,
     error_spikes: Optional[list[ErrorSpike]] = None,
 ) -> None:
-    _print_header("LOG ANALYSIS REPORT: ")
+    print("*** LOG ANALYSIS REPORT ***")
+    _print_header("SUMMARY: ")
     _print_overview(summary, invalid_count, total_lines)
     print("-" * _RULE_WIDTH)
 

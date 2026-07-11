@@ -204,7 +204,7 @@ def run(argv: Optional[list[str]] = None) -> int:
     # Save the hourly distribution to a CSV file automatically
     try:
         _write_hourly_csv(summary.hourly_distribution, _HOURLY_CSV_PATH)
-        print(f"Hourly distribution saved to {_HOURLY_CSV_PATH}", file=sys.stderr)
+        print(f"Hourly distribution saved to {_HOURLY_CSV_PATH}\n", file=sys.stderr)
     except OSError as exc:
         print(f"error: could not write hourly CSV to {_HOURLY_CSV_PATH!r}: {exc}", file=sys.stderr)
         return 1
