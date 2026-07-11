@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+import csv
 import json
 import sys
 import time
@@ -17,6 +18,8 @@ _TIME_FILTER_FORMATS = (
     "%Y-%m-%d",
     "%d/%b/%Y:%H:%M:%S",
 )
+
+_HOURLY_CSV_PATH = "output/hourly_distribution.csv"
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
@@ -145,6 +148,14 @@ def _in_range(
         return False
     return True
 
+def _write_hourly_csv(hourly_distribution: dict[int, int], path: str) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["hour", "request_count"])
+        for hour in range(24):
+            writer.writerow([f"{hour:02d}:00", hourly_distribution.get(hour, 0)])
+
 
 def run(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
@@ -189,6 +200,14 @@ def run(argv: Optional[list[str]] = None) -> int:
 
     elapsed = time.perf_counter() - started_at
     summary = aggregator.summary(top_n=args.top)
+
+    # Save the hourly distribution to a CSV file automatically
+    try:
+        _write_hourly_csv(summary.hourly_distribution, _HOURLY_CSV_PATH)
+        print(f"Hourly distribution saved to {_HOURLY_CSV_PATH}", file=sys.stderr)
+    except OSError as exc:
+        print(f"error: could not write hourly CSV to {_HOURLY_CSV_PATH!r}: {exc}", file=sys.stderr)
+        return 1
 
     suspicious_ips = []
     error_spikes = []

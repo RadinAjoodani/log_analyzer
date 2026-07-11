@@ -57,10 +57,8 @@ def _print_overview(summary: StatsSummary, invalid_count: int, total_lines: int)
         ("Valid requests", summary.total_requests),
         ("Invalid/skipped lines", invalid_count),
         ("Unique IP addresses", summary.unique_ip_count),
-        ("4xx errors (client errors): ", f"{summary.client_error_count}%"),
-        ("4xx error rate (server errors): ", f"{summary.server_error_count}%"),
-        ("5xx errors (server errors): ", f"{summary.client_error_rate:.2f}%"),
-        ("5xx error rate (server errors): ", f"{summary.server_error_rate:.2f}%"),
+        ("4xx errors (client errors)", f"{summary.client_error_count} ({summary.client_error_rate:.2f}%)"),
+        ("5xx errors (server errors)", f"{summary.server_error_count} ({summary.server_error_rate:.2f}%)"),
         ("Total errors", summary.client_error_count + summary.server_error_count),
         ("Total error rate", f"{(summary.client_error_rate + summary.server_error_rate):.2f}%"),
     ]
