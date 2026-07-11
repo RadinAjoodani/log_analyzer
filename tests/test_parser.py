@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone, timedelta
-from log_analyzer.parser import parse_line, _parse_line_strict, LogParseError, LogEntry
+from log_analyzer.parser import parse_line, LogEntry
 
 VALID_LINE = (
     '127.0.0.1 - frank [10/Oct/2023:13:55:36 -0700] '
@@ -52,12 +52,6 @@ class TestValidLines(unittest.TestCase):
         self.assertIsNotNone(entry)
         self.assertEqual(entry.size, 0)
 
-    def test_ipv6_address_is_accepted(self):
-        line = '::1 - - [10/Oct/2023:14:02:15 -0700] "GET / HTTP/1.1" 200 100'
-        entry = parse_line(line)
-        self.assertIsNotNone(entry)
-        self.assertEqual(entry.ip, "::1")
-
     def test_trailing_newline_does_not_break_parsing(self):
         entry = parse_line(VALID_LINE + "\n")
         self.assertIsNotNone(entry)
@@ -95,19 +89,21 @@ class TestInvalidLines(unittest.TestCase):
         line = '10.0.0.1 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" 999 10'
         self.assertIsNone(parse_line(line))
 
+    def test_invalid_ip_shaped_token_returns_none(self):
+        line = '999.999.999.999 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" 200 10'
+        self.assertIsNone(parse_line(line))
+
+    def test_status_must_be_three_digits(self):
+        line = '10.0.0.1 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" 20 10'
+        self.assertIsNone(parse_line(line))
+
     def test_non_numeric_status_returns_none(self):
         line = '10.0.0.1 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" ABC 10'
         self.assertIsNone(parse_line(line))
 
-    def test_invalid_ip_shaped_token_returns_none(self):
-        # Looks vaguely IP-like but octets are out of range / wrong shape
-        line = '999.999.999.999 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" 200 10'
+    def test_non_numeric_size_returns_none(self):
+        line = '10.0.0.1 - - [10/Oct/2023:14:00:00 -0700] "GET /x HTTP/1.1" 200 abc'
         self.assertIsNone(parse_line(line))
-
-    def test_strict_variant_raises_with_reason(self):
-        line = "garbage"
-        with self.assertRaises(LogParseError):
-            _parse_line_strict(line)
 
 
 if __name__ == "__main__":

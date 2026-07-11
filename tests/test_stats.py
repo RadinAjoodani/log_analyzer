@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime
+
 from log_analyzer.parser import LogEntry
 from log_analyzer.stats import StatsAggregator
-
 
 def make_entry(
     ip="10.0.0.1",
@@ -14,7 +14,7 @@ def make_entry(
 ):
     return LogEntry(
         ip=ip,
-        timestamp=datetime(2023, 10, 10, hour, 0, 0),
+        timestamp=datetime(2026, 5, 4, hour, 0, 0),
         method=method,
         endpoint=endpoint,
         protocol="HTTP/1.1",
@@ -22,14 +22,14 @@ def make_entry(
         size=size,
     )
 
-
 class TestBasicCounts(unittest.TestCase):
     def test_empty_aggregator_reports_zero(self):
         agg = StatsAggregator()
         summary = agg.summary()
         self.assertEqual(summary.total_requests, 0)
         self.assertEqual(summary.unique_ip_count, 0)
-        self.assertEqual(summary.error_rate, 0.0)
+        self.assertEqual(summary.client_error_rate, 0.0)
+        self.assertEqual(summary.server_error_rate, 0.0)
         self.assertEqual(summary.top_endpoints, [])
 
     def test_total_requests_counts_every_entry(self):
@@ -52,7 +52,6 @@ class TestBasicCounts(unittest.TestCase):
         summary = agg.summary()
         self.assertEqual(summary.total_requests, 3)
         self.assertEqual(summary.unique_ip_count, 2)
-
 
 class TestTopEndpoints(unittest.TestCase):
     def test_top_endpoints_sorted_by_count_descending(self):
@@ -79,7 +78,6 @@ class TestTopEndpoints(unittest.TestCase):
     def test_top_n_larger_than_available_endpoints(self):
         agg = StatsAggregator()
         agg.add(make_entry(endpoint="/only-one"))
-
         top = agg.summary(top_n=10).top_endpoints
         self.assertEqual(top, [("/only-one", 1)])
 
@@ -89,24 +87,30 @@ class TestErrorRate(unittest.TestCase):
         agg = StatsAggregator()
         for _ in range(10):
             agg.add(make_entry(status=200))
-        self.assertEqual(agg.summary().error_rate, 0.0)
+        summary = agg.summary()
+        self.assertEqual(summary.client_error_rate, 0.0)
+        self.assertEqual(summary.server_error_rate, 0.0)
 
-    def test_error_rate_counts_4xx_and_5xx(self):
+    def test_error_rate_counts_4xx_and_5xx_separately(self):
         agg = StatsAggregator()
         agg.add(make_entry(status=200))
         agg.add(make_entry(status=200))
-        agg.add(make_entry(status=404))  # error
-        agg.add(make_entry(status=500))  # error
+        agg.add(make_entry(status=404))  # client error
+        agg.add(make_entry(status=500))  # server error
 
         summary = agg.summary()
-        self.assertEqual(summary.error_count, 2)
-        self.assertEqual(summary.error_rate, 50.0)
+        self.assertEqual(summary.client_error_count, 1)
+        self.assertEqual(summary.server_error_count, 1)
+        self.assertEqual(summary.client_error_rate, 25.0)
+        self.assertEqual(summary.server_error_rate, 25.0)
 
     def test_3xx_is_not_counted_as_error(self):
         agg = StatsAggregator()
         agg.add(make_entry(status=200))
         agg.add(make_entry(status=301))
-        self.assertEqual(agg.summary().error_count, 0)
+        summary = agg.summary()
+        self.assertEqual(summary.client_error_count, 0)
+        self.assertEqual(summary.server_error_count, 0)
 
     def test_status_code_counts_breakdown(self):
         agg = StatsAggregator()
@@ -115,6 +119,16 @@ class TestErrorRate(unittest.TestCase):
         agg.add(make_entry(status=404))
         summary = agg.summary()
         self.assertEqual(summary.status_code_counts, {200: 2, 404: 1})
+
+    def test_4xx_and_5xx_errors_are_counted_separately(self):
+        agg = StatsAggregator()
+        agg.add(make_entry(status=404))
+        agg.add(make_entry(status=401))
+        agg.add(make_entry(status=500))
+
+        summary = agg.summary()
+        self.assertEqual(summary.client_error_count, 2)
+        self.assertEqual(summary.server_error_count, 1)
 
 
 class TestHourlyDistribution(unittest.TestCase):
@@ -141,7 +155,6 @@ class TestHourlyDistribution(unittest.TestCase):
 class TestSummaryToDict(unittest.TestCase):
     def test_to_dict_is_json_serializable_shape(self):
         import json
-
         agg = StatsAggregator()
         agg.add(make_entry(status=200))
         agg.add(make_entry(status=404))
@@ -152,14 +165,17 @@ class TestSummaryToDict(unittest.TestCase):
         self.assertIn("top_endpoints", payload)
         self.assertIsInstance(serialized, str)
 
-    def test_to_dict_rounds_error_rate(self):
+    def test_to_dict_contains_separate_error_fields(self):
         agg = StatsAggregator()
         agg.add(make_entry(status=200))
         agg.add(make_entry(status=200))
         agg.add(make_entry(status=404))
 
         payload = agg.summary().to_dict()
-        self.assertEqual(payload["error_rate_percent"], 33.33)
+        self.assertEqual(payload["client_error_count"], 1)
+        self.assertEqual(payload["server error_count"], 0)
+        self.assertEqual(payload["client_error_rate_percent"], 33.33)
+        self.assertEqual(payload["server_error_rate_percent"], 0.0)
 
 
 if __name__ == "__main__":
